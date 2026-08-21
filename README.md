@@ -19,6 +19,6 @@ https://kevinlabens-del.github.io/CR3-TIX-PONG/
 
 ## Déploiement
 
-Le projet source se trouve dans `source/`. Chaque mise à jour de la branche `main` est compilée et publiée automatiquement avec GitHub Pages.
+Le projet source se trouve dans `source/`. La version statique validée est publiée depuis la branche `gh-pages` avec GitHub Pages.
 
 CR3@TIX — De l’imagination à la conception.
