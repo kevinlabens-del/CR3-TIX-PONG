@@ -69,7 +69,7 @@ npm run build:github
 - `app/legacy-v2.tsx` et `app/v2-data.ts` : référence conservée de la base V2 ;
 - `tests/` : tests du moteur, des migrations et du contrat fonctionnel ;
 - `public/manifest.webmanifest` et `public/sw.js` : installation et cache hors connexion V3 ;
-- `.github/workflows/deploy-pages.yml` : déploiement GitHub Pages.
+- `out/` : export statique validé, prêt pour la branche `gh-pages`.
 
 ## Sauvegardes
 
@@ -77,7 +77,7 @@ La V3 lit en priorité `cr3atix-pong-v3-profile`. En son absence, elle migre aut
 
 ## Publication GitHub Pages
 
-Le workflow GitHub Actions compile et publie automatiquement la branche `main`. Dans les paramètres du dépôt, choisir **Pages → Source → GitHub Actions**. Le projet reste compatible avec l’URL `/CR3-TIX-PONG/`.
+La configuration officielle existante publie la branche `gh-pages`. Exécuter `npm run build:github`, puis déployer le contenu de `out/` sur cette branche. L’archive de release contient déjà cet export validé. Le projet reste compatible avec l’URL `/CR3-TIX-PONG/`.
 
 Voir également [CHANGELOG.md](CHANGELOG.md), [docs/AUDIT-V2-V3.md](docs/AUDIT-V2-V3.md) et [docs/TESTS-V3.md](docs/TESTS-V3.md).
 

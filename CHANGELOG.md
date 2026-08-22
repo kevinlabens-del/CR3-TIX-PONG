@@ -41,7 +41,7 @@ Toutes les évolutions notables de CR3@TIX PONG sont consignées ici.
 - effets renforcés pour Zéro Absolu et Éruption Solaire ;
 - trois environnements visuels, variations de boss, audio synthétique dynamique et vibrations ;
 - manifest V3, service worker à cache versionné, installation et hors connexion ;
-- export statique et workflow GitHub Pages pour `/CR3-TIX-PONG/`.
+- export statique prêt pour la branche GitHub Pages sous `/CR3-TIX-PONG/`.
 
 ## [2.x]
 
