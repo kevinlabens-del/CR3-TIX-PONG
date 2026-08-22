@@ -24,12 +24,11 @@
   },
   "include": [
     "next-env.d.ts",
-    "app/page.tsx",
-    "app/layout.tsx",
-    "app/v2-data.ts",
-    "next.config.ts",
+    "**/*.ts",
+    "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "tests"]
 }

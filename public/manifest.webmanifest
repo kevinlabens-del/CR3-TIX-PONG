@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "CR3@TIX PONG V3",
+  "short_name": "PONG V3",
+  "description": "Combat arcade élémentaire : campagne, boss multi-phases, techniques, power-ups et modes V3.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#050712",
+  "theme_color": "#060914",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

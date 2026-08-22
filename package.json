@@ -1,0 +1,35 @@
+{
+  "name": "cr3atix-pong-v3",
+  "version": "3.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "build:github": "NEXT_PUBLIC_BASE_PATH=/CR3-TIX-PONG GITHUB_PAGES=true next build --webpack",
+    "start": "next start",
+    "test": "npm run test:core && npm run build && npm run build:github",
+    "test:core": "node --import tsx --test tests/*.test.ts",
+    "lint": "eslint app/PongV3.tsx app/arena-renderer.ts app/game-core.ts app/game-state.ts app/v3-data.ts app/layout.tsx app/page.tsx tests next.config.ts"
+  },
+  "dependencies": {
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "4.2.1",
+    "tsx": "4.22.1",
+    "typescript": "5.9.3"
+  },
+  "type": "module",
+  "displayName": "CR3@TIX PONG V3"
+}
