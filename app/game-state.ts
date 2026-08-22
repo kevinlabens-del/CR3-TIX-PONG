@@ -194,6 +194,171 @@ export const DEFAULT_DUEL_CONFIG: DuelConfig = {
   handicap: "none",
 };
 
+type TouchPaddleMeta = {
+  physicsVelocity: number;
+  touchVelocity: number;
+  touchActive: boolean;
+  lastTouchUpdate: number;
+};
+
+type TouchOwner = {
+  pointerId: number;
+  offsetY: number;
+  lastCenter: number;
+  lastTime: number;
+};
+
+const paddleTouchMeta = new WeakMap<Paddle, TouchPaddleMeta>();
+let activeGame: GameState | null = null;
+const touchOwners: Record<ElementSide, TouchOwner | null> = { ice: null, fire: null };
+
+function nowMs() {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+function makePaddle(x: number, height: number): Paddle {
+  const paddle = {
+    x,
+    y: WORLD_H / 2 - height / 2,
+    previousY: WORLD_H / 2 - height / 2,
+    targetY: WORLD_H / 2,
+    width: 24,
+    height,
+    baseHeight: height,
+    boostTimer: 0,
+  } as Paddle;
+  const meta: TouchPaddleMeta = { physicsVelocity: 0, touchVelocity: 0, touchActive: false, lastTouchUpdate: 0 };
+  paddleTouchMeta.set(paddle, meta);
+  Object.defineProperty(paddle, "velocity", {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (meta.touchActive && nowMs() - meta.lastTouchUpdate <= 90) return meta.touchVelocity;
+      return meta.physicsVelocity;
+    },
+    set(value: number) {
+      meta.physicsVelocity = Number.isFinite(value) ? value : 0;
+    },
+  });
+  return paddle;
+}
+
+function markTouchVelocity(paddle: Paddle, velocity: number, active: boolean) {
+  const meta = paddleTouchMeta.get(paddle);
+  if (!meta) return;
+  meta.touchActive = active;
+  meta.touchVelocity = Math.max(-2200, Math.min(2200, Number.isFinite(velocity) ? velocity : 0));
+  meta.lastTouchUpdate = nowMs();
+}
+
+function paddleForSide(game: GameState, side: ElementSide) {
+  return side === "ice" ? game.left : game.right;
+}
+
+function rawWorldY(canvas: HTMLCanvasElement, clientY: number) {
+  const rect = canvas.getBoundingClientRect();
+  if (rect.height <= 0) return WORLD_H / 2;
+  return ((clientY - rect.top) / rect.height) * WORLD_H;
+}
+
+function clampPaddleCenter(paddle: Paddle, center: number) {
+  return Math.max(paddle.height / 2 + 24, Math.min(WORLD_H - paddle.height / 2 - 24, center));
+}
+
+function releaseTouchOwner(pointerId: number) {
+  for (const side of ["ice", "fire"] as ElementSide[]) {
+    const owner = touchOwners[side];
+    if (!owner || owner.pointerId !== pointerId) continue;
+    const game = activeGame;
+    if (game) markTouchVelocity(paddleForSide(game, side), 0, false);
+    touchOwners[side] = null;
+  }
+}
+
+function installTouchPrecisionController() {
+  if (typeof window === "undefined" || typeof HTMLCanvasElement === "undefined") return;
+  const marker = "__CR3ATIX_PONG_TOUCH_V3__";
+  const globalWindow = window as Window & Record<string, unknown>;
+  if (globalWindow[marker]) return;
+  globalWindow[marker] = true;
+
+  window.addEventListener("pointerdown", (event) => {
+    const game = activeGame;
+    const canvas = event.target instanceof HTMLCanvasElement ? event.target : null;
+    if (!game || !canvas || !canvas.closest(".canvas-frame")) return;
+    const pointer = game.pointers.get(event.pointerId);
+    if (!pointer) return;
+    const side = pointer.side;
+    const existing = touchOwners[side];
+    if (existing && existing.pointerId !== event.pointerId) {
+      game.pointers.delete(event.pointerId);
+      try {
+        if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      } catch {
+        // Certains navigateurs libèrent déjà automatiquement la capture.
+      }
+      return;
+    }
+    const paddle = paddleForSide(game, side);
+    const currentCenter = paddle.y + paddle.height / 2;
+    const controlCenter = game.reverse[side] > 0 ? WORLD_H - currentCenter : currentCenter;
+    const y = rawWorldY(canvas, event.clientY);
+    touchOwners[side] = {
+      pointerId: event.pointerId,
+      offsetY: y - controlCenter,
+      lastCenter: currentCenter,
+      lastTime: event.timeStamp,
+    };
+    paddle.targetY = currentCenter;
+    markTouchVelocity(paddle, 0, true);
+  });
+
+  window.addEventListener("pointermove", (event) => {
+    const game = activeGame;
+    const canvas = event.target instanceof HTMLCanvasElement ? event.target : null;
+    if (!game || !canvas || !canvas.closest(".canvas-frame")) return;
+    const side: ElementSide | null = touchOwners.ice?.pointerId === event.pointerId ? "ice" : touchOwners.fire?.pointerId === event.pointerId ? "fire" : null;
+    if (!side) return;
+    const owner = touchOwners[side];
+    if (!owner) return;
+    const paddle = paddleForSide(game, side);
+    const samples = typeof event.getCoalescedEvents === "function" ? event.getCoalescedEvents() : [event];
+    const usableSamples = samples.length ? samples : [event];
+
+    for (const sample of usableSamples) {
+      const controlY = rawWorldY(canvas, sample.clientY) - owner.offsetY;
+      const desiredCenter = clampPaddleCenter(paddle, game.reverse[side] > 0 ? WORLD_H - controlY : controlY);
+      const dt = Math.max(0.004, Math.min(0.08, (sample.timeStamp - owner.lastTime) / 1000 || 0.016));
+      const instantVelocity = (desiredCenter - owner.lastCenter) / dt;
+      const previousVelocity = paddleTouchMeta.get(paddle)?.touchVelocity ?? 0;
+      const filteredVelocity = previousVelocity * 0.34 + instantVelocity * 0.66;
+      paddle.targetY = desiredCenter;
+
+      // Hors effet de gel volontaire, la raquette suit exactement le doigt.
+      if (game.freeze[side] <= 0) {
+        const nextTop = Math.max(22, Math.min(WORLD_H - paddle.height - 22, desiredCenter - paddle.height / 2));
+        paddle.previousY = paddle.y;
+        paddle.y = nextTop;
+      }
+
+      markTouchVelocity(paddle, filteredVelocity, true);
+      owner.lastCenter = desiredCenter;
+      owner.lastTime = sample.timeStamp;
+    }
+  });
+
+  const release = (event: PointerEvent) => releaseTouchOwner(event.pointerId);
+  window.addEventListener("pointerup", release);
+  window.addEventListener("pointercancel", release);
+  window.addEventListener("lostpointercapture", release);
+  window.addEventListener("blur", () => {
+    if (touchOwners.ice) releaseTouchOwner(touchOwners.ice.pointerId);
+    if (touchOwners.fire) releaseTouchOwner(touchOwners.fire.pointerId);
+  });
+}
+
+installTouchPrecisionController();
+
 export function makeBall(game: Pick<GameState, "nextBallId" | "rng">, direction: -1 | 1, speed: number, element: ElementSide, angleOffset = 0): Ball {
   const angle = randomRange(game.rng, -0.34, 0.34) * Math.PI + angleOffset;
   const ball: Ball = {
@@ -240,8 +405,8 @@ export function freshGame(
   const servingTo: ElementSide = seededRandom(rng) > 0.5 ? "ice" : "fire";
   const isChaos = mode === "chaos" || (mode === "duel" && duelConfig.chaos) || stage?.modifier === "chaos";
   const game: GameState = {
-    left: { x: 68, y: WORLD_H / 2 - playerHeight / 2, previousY: WORLD_H / 2 - playerHeight / 2, targetY: WORLD_H / 2, width: 24, height: playerHeight, baseHeight: playerHeight, boostTimer: 0, velocity: 0 },
-    right: { x: WORLD_W - 92, y: WORLD_H / 2 - enemyHeight / 2, previousY: WORLD_H / 2 - enemyHeight / 2, targetY: WORLD_H / 2, width: 24, height: enemyHeight, baseHeight: enemyHeight, boostTimer: 0, velocity: 0 },
+    left: makePaddle(68, playerHeight),
+    right: makePaddle(WORLD_W - 92, enemyHeight),
     balls: [],
     nextBallId: 1,
     particles: [],
@@ -303,6 +468,17 @@ export function freshGame(
     quality,
     ended: false,
   };
+
+  // Pendant le Boss Rush, PongV3 fusionne le nouvel état dans l'objet de partie existant.
+  // On conserve donc la référence active précédente jusqu'à cette fusion pour que le tactile reste branché.
+  if (activeGame && activeGame.mode === "bossRush" && !activeGame.ended && mode === "bossRush") {
+    // La référence courante reste valide et recevra Object.assign(game, nextGame).
+  } else {
+    activeGame = game;
+    if (touchOwners.ice) releaseTouchOwner(touchOwners.ice.pointerId);
+    if (touchOwners.fire) releaseTouchOwner(touchOwners.fire.pointerId);
+  }
+
   if (stage?.modifier === "fortress") game.barriers.push({ x: WORLD_W * 0.73, y: WORLD_H * 0.25, width: 18, height: WORLD_H * 0.5, hp: 4, maxHp: 4, timer: 999, element: "fire", kind: "fortress" });
   return game;
 }
@@ -312,4 +488,3 @@ export function launchServe(game: GameState) {
   game.balls = [makeBall(game, direction, game.launchSpeed, direction > 0 ? "ice" : "fire")];
   game.serveDelay = 0;
 }
-

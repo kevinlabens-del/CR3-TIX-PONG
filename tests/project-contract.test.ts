@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const page = readFileSync(new URL("../app/PongV3.tsx", import.meta.url), "utf8");
+const state = readFileSync(new URL("../app/game-state.ts", import.meta.url), "utf8");
 const data = readFileSync(new URL("../app/v3-data.ts", import.meta.url), "utf8");
 const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
@@ -48,6 +49,18 @@ test("le combat mobile bloque gestes parasites et respecte les zones sûres", ()
   assert.match(css, /height:\s*100dvh/);
   assert.match(page, /onPointerCancel/);
   assert.match(page, /setPointerCapture/);
+});
+
+test("le contrôleur tactile V3 suit précisément le doigt et protège le Duel", () => {
+  assert.match(state, /installTouchPrecisionController/);
+  assert.match(state, /getCoalescedEvents/);
+  assert.match(state, /lostpointercapture/);
+  assert.match(state, /touchOwners/);
+  assert.match(state, /game\.pointers\.delete\(event\.pointerId\)/);
+  assert.match(state, /paddle\.y = nextTop/);
+  assert.match(state, /game\.reverse\[side\]/);
+  assert.match(state, /game\.freeze\[side\] <= 0/);
+  assert.match(state, /touchVelocity/);
 });
 
 test("la physique utilise un pas fixe et une collision continue", () => {
