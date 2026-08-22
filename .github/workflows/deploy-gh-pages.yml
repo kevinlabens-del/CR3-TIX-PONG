@@ -34,9 +34,35 @@ jobs:
         run: npm run test:core
 
       - name: Build for GitHub Pages
-        run: npm run build:github
+        id: build
+        shell: bash
+        run: |
+          set +e
+          npm run build:github > /tmp/cr3atix-build.log 2>&1
+          code=$?
+          cat /tmp/cr3atix-build.log
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish build diagnostics
+        if: steps.build.outputs.exit_code != '0'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git checkout -B gh-pages origin/gh-pages
+          cp /tmp/cr3atix-build.log BUILD_ERROR.txt
+          git add BUILD_ERROR.txt
+          git commit -m "Record failed Pages build diagnostics" || true
+          git push origin gh-pages
+
+      - name: Stop after failed build
+        if: steps.build.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Deploy gh-pages
+        if: steps.build.outputs.exit_code == '0'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
