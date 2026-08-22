@@ -31,6 +31,20 @@ jobs:
         run: |
           npm install --no-audit --no-fund
 
+      - name: Apply TypeScript compatibility fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('app/game-state.ts')
+          text = path.read_text()
+          old = 'const globalWindow = window as Window & Record<string, unknown>;'
+          new = 'const globalWindow = window as unknown as Window & Record<string, unknown>;'
+          if old not in text:
+              raise SystemExit('Touch controller cast not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
       - name: Run core tests (non-blocking)
         continue-on-error: true
         run: npm run test:core
