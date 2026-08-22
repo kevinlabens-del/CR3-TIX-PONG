@@ -278,7 +278,7 @@ function releaseTouchOwner(pointerId: number) {
 function installTouchPrecisionController() {
   if (typeof window === "undefined" || typeof HTMLCanvasElement === "undefined") return;
   const marker = "__CR3ATIX_PONG_TOUCH_V3__";
-  const globalWindow = window as Window & Record<string, unknown>;
+  const globalWindow = window as unknown as Window & Record<string, unknown>;
   if (globalWindow[marker]) return;
   globalWindow[marker] = true;
 
