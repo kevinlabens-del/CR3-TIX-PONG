@@ -27,6 +27,7 @@ jobs:
         run: |
           git fetch origin main
           git reset --hard FETCH_HEAD
+          echo "BUILDING_SHA=$(git rev-parse HEAD)"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,6 +38,21 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Ensure touch controller TypeScript compatibility
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('app/game-state.ts')
+          text = path.read_text()
+          text = text.replace(
+              'const globalWindow = window as Window & Record<string, unknown>;',
+              'const globalWindow = window as unknown as Window & Record<string, unknown>;'
+          )
+          path.write_text(text)
+          PY
+          sed -n '279,284p' app/game-state.ts
+
       - name: Run core tests (non-blocking)
         continue-on-error: true
         run: npm run test:core
@@ -46,7 +62,11 @@ jobs:
         shell: bash
         run: |
           set +e
-          npm run build:github > /tmp/cr3atix-build.log 2>&1
+          {
+            echo "BUILDING_SHA=$(git rev-parse HEAD)"
+            sed -n '279,284p' app/game-state.ts
+            npm run build:github
+          } > /tmp/cr3atix-build.log 2>&1
           code=$?
           cat /tmp/cr3atix-build.log
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
