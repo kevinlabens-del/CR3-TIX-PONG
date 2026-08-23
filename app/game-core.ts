@@ -107,16 +107,19 @@ export function reflectedTargetY(y: number, vy: number, travelSeconds: number, m
   const span = Math.max(1, maxY - minY);
   const fullTravel = Math.max(0, travelSeconds);
 
-  // L'IA ne doit pas connaître parfaitement plusieurs rebonds à l'avance.
-  // On limite son horizon de lecture puis on mélange la projection avec la
-  // position actuelle. Plus la balle est loin, moins la prédiction est fiable.
-  const predictionHorizon = Math.min(fullTravel, 0.34);
+  // Lecture volontairement humaine : l'IA suit surtout la position actuelle de
+  // la balle et ne projette qu'une très courte portion de trajectoire. Les tirs
+  // croisés et les rebonds tardifs peuvent donc réellement la prendre de vitesse.
+  const predictionHorizon = Math.min(fullTravel, 0.1);
   const projected = y + vy * predictionHorizon - minY;
   const period = span * 2;
   const wrapped = ((projected % period) + period) % period;
   const reflected = minY + (wrapped <= span ? wrapped : period - wrapped);
-  const confidence = fullTravel <= 0.34 ? 0.92 : fullTravel <= 0.7 ? 0.72 : 0.56;
-  return Math.max(minY, Math.min(maxY, y + (reflected - y) * confidence));
+  const confidence = fullTravel <= 0.16 ? 0.58 : fullTravel <= 0.42 ? 0.34 : 0.16;
+  const centerBias = Math.min(1, fullTravel / 0.9) * 0.12;
+  const observed = y + (reflected - y) * confidence;
+  const center = (minY + maxY) / 2;
+  return Math.max(minY, Math.min(maxY, observed + (center - observed) * centerBias));
 }
 
 export function sweptPaddleCollision(
