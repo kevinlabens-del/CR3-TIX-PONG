@@ -105,10 +105,18 @@ export function pickWeightedPowerUp(
 
 export function reflectedTargetY(y: number, vy: number, travelSeconds: number, minY: number, maxY: number) {
   const span = Math.max(1, maxY - minY);
-  const projected = y + vy * Math.max(0, travelSeconds) - minY;
+  const fullTravel = Math.max(0, travelSeconds);
+
+  // L'IA ne doit pas connaître parfaitement plusieurs rebonds à l'avance.
+  // On limite son horizon de lecture puis on mélange la projection avec la
+  // position actuelle. Plus la balle est loin, moins la prédiction est fiable.
+  const predictionHorizon = Math.min(fullTravel, 0.34);
+  const projected = y + vy * predictionHorizon - minY;
   const period = span * 2;
   const wrapped = ((projected % period) + period) % period;
-  return minY + (wrapped <= span ? wrapped : period - wrapped);
+  const reflected = minY + (wrapped <= span ? wrapped : period - wrapped);
+  const confidence = fullTravel <= 0.34 ? 0.92 : fullTravel <= 0.7 ? 0.72 : 0.56;
+  return Math.max(minY, Math.min(maxY, y + (reflected - y) * confidence));
 }
 
 export function sweptPaddleCollision(
