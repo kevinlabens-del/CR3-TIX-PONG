@@ -51,6 +51,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr">
+      <head>
+        <script async src="https://kevinlabens-del.github.io/CR3-TIX-ANALYTIX./analytics.js" data-project-id="ac6edcd4-e66c-4384-ace9-43a0577e03ec" data-project-key="5b50f153-a241-49ae-8325-2235d8f49cee" />
+      </head>
       <body>{children}</body>
     </html>
   );
