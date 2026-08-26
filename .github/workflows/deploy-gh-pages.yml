@@ -62,9 +62,7 @@ jobs:
         game.portals = game.portals.slice(-4);
         if (boss.phase === 2) for (const ball of game.balls) ball.spin += randomRange(game.rng, -190, 190);'''
           new = '''      } else if (boss.name === "VORTEX") {
-        // VORTEX garde son identité de boss de faille, mais plusieurs rifts ne doivent
-        // jamais transformer l'échange en mur défensif impossible à lire.
-        // Un seul couple de portails est actif à la fois, avec une vraie fenêtre de récupération.
+        // Un seul rift actif : la phase 2 devient plus nerveuse, pas impossible.
         boss.telegraph = boss.phase === 1 ? "RIFT OUVERT" : "RIFT INSTABLE";
         game.portals = game.portals.filter((portal) => portal.owner !== "arena");
         game.portals.push({
@@ -76,10 +74,8 @@ jobs:
           timer: boss.phase === 1 ? 4.6 : 4.0,
           owner: "arena",
         });
-        // En phase 2 la trajectoire reste perturbée, mais assez peu pour rester anticipable.
         if (boss.phase === 2) {
           for (const ball of game.balls) ball.spin += randomRange(game.rng, -72, 72);
-          // La surcharge du rift désynchronise brièvement VORTEX : c'est la fenêtre d'attaque.
           game.freeze.fire = Math.max(game.freeze.fire, 0.72);
         }'''
           if old not in text:
@@ -92,7 +88,7 @@ jobs:
           pong.write_text(text)
           PY
           grep 'id: 8, chapter: 2' app/v3-data.ts
-          grep -A25 'boss.name === "VORTEX"' app/PongV3.tsx | head -26
+          grep -A22 'boss.name === "VORTEX"' app/PongV3.tsx | head -23
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -116,45 +112,15 @@ jobs:
           )
           path.write_text(text)
           PY
-          sed -n '279,284p' app/game-state.ts
 
-      - name: Run core tests (non-blocking)
+      - name: Run core tests
         continue-on-error: true
         run: npm run test:core
 
       - name: Build for GitHub Pages
-        id: build
-        shell: bash
-        run: |
-          set +e
-          {
-            echo "BUILDING_SHA=$(git rev-parse HEAD)"
-            npm run build:github
-          } > /tmp/cr3atix-build.log 2>&1
-          code=$?
-          cat /tmp/cr3atix-build.log
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Publish build diagnostics
-        if: steps.build.outputs.exit_code != '0'
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin gh-pages
-          git checkout -B gh-pages origin/gh-pages
-          cp /tmp/cr3atix-build.log BUILD_ERROR.txt
-          git add BUILD_ERROR.txt
-          git commit -m "Record failed Pages build diagnostics" || true
-          git push origin gh-pages
-
-      - name: Stop after failed build
-        if: steps.build.outputs.exit_code != '0'
-        run: exit 1
+        run: npm run build:github
 
       - name: Deploy gh-pages
-        if: steps.build.outputs.exit_code == '0'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
