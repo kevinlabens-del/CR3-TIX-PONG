@@ -8,8 +8,28 @@ const DEFAULT_SENSITIVITY = 2.2;
 const MIN_SENSITIVITY = 1;
 const MAX_SENSITIVITY = 3;
 
-type PointerStart = {
+type PointerStart = { clientY: number };
+type PendingMove = {
+  pointerId: number;
+  pointerType: string;
+  isPrimary: boolean;
+  clientX: number;
   clientY: number;
+  screenX: number;
+  screenY: number;
+  button: number;
+  buttons: number;
+  pressure: number;
+  tangentialPressure: number;
+  tiltX: number;
+  tiltY: number;
+  twist: number;
+  width: number;
+  height: number;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+  metaKey: boolean;
 };
 
 function clampSensitivity(value: number) {
@@ -24,9 +44,7 @@ export default function TouchSensitivityEnhancer() {
   useEffect(() => {
     try {
       const stored = Number(window.localStorage.getItem(STORAGE_KEY));
-      if (Number.isFinite(stored) && stored >= MIN_SENSITIVITY && stored <= MAX_SENSITIVITY) {
-        setSensitivity(stored);
-      }
+      if (Number.isFinite(stored) && stored >= MIN_SENSITIVITY && stored <= MAX_SENSITIVITY) setSensitivity(stored);
     } catch {
       // Le réglage reste utilisable même si le stockage local est indisponible.
     }
@@ -42,8 +60,52 @@ export default function TouchSensitivityEnhancer() {
 
   useEffect(() => {
     const starts = new Map<number, PointerStart>();
+    const pendingMoves = new Map<number, PendingMove>();
     const syntheticEvents = new WeakSet<Event>();
     let activeCanvas: HTMLCanvasElement | null = null;
+    let moveFrame = 0;
+    let domFrame = 0;
+
+    const flushMoves = () => {
+      moveFrame = 0;
+      const canvas = activeCanvas;
+      if (!canvas || pendingMoves.size === 0) return;
+      const rect = canvas.getBoundingClientRect();
+      for (const pending of pendingMoves.values()) {
+        const start = starts.get(pending.pointerId);
+        if (!start) continue;
+        const amplifiedY = start.clientY + (pending.clientY - start.clientY) * sensitivity;
+        const clientY = Math.max(rect.top, Math.min(rect.bottom, amplifiedY));
+        const amplifiedEvent = new PointerEvent("pointermove", {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          pointerId: pending.pointerId,
+          pointerType: pending.pointerType,
+          isPrimary: pending.isPrimary,
+          clientX: pending.clientX,
+          clientY,
+          screenX: pending.screenX,
+          screenY: pending.screenY,
+          button: pending.button,
+          buttons: pending.buttons,
+          pressure: pending.pressure,
+          tangentialPressure: pending.tangentialPressure,
+          tiltX: pending.tiltX,
+          tiltY: pending.tiltY,
+          twist: pending.twist,
+          width: pending.width,
+          height: pending.height,
+          ctrlKey: pending.ctrlKey,
+          shiftKey: pending.shiftKey,
+          altKey: pending.altKey,
+          metaKey: pending.metaKey,
+        });
+        syntheticEvents.add(amplifiedEvent);
+        canvas.dispatchEvent(amplifiedEvent);
+      }
+      pendingMoves.clear();
+    };
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
@@ -52,26 +114,15 @@ export default function TouchSensitivityEnhancer() {
 
     const onPointerMove = (event: PointerEvent) => {
       if (syntheticEvents.has(event)) return;
-      const start = starts.get(event.pointerId);
-      if (!start || (event.pointerType !== "touch" && event.pointerType !== "pen")) return;
-
-      const canvas = event.currentTarget as HTMLCanvasElement;
-      const rect = canvas.getBoundingClientRect();
-      const amplifiedY = start.clientY + (event.clientY - start.clientY) * sensitivity;
-      const clientY = Math.max(rect.top, Math.min(rect.bottom, amplifiedY));
-
+      if (!starts.has(event.pointerId) || (event.pointerType !== "touch" && event.pointerType !== "pen")) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-
-      const amplifiedEvent = new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
+      pendingMoves.set(event.pointerId, {
         pointerId: event.pointerId,
         pointerType: event.pointerType,
         isPrimary: event.isPrimary,
         clientX: event.clientX,
-        clientY,
+        clientY: event.clientY,
         screenX: event.screenX,
         screenY: event.screenY,
         button: event.button,
@@ -88,12 +139,12 @@ export default function TouchSensitivityEnhancer() {
         altKey: event.altKey,
         metaKey: event.metaKey,
       });
-      syntheticEvents.add(amplifiedEvent);
-      canvas.dispatchEvent(amplifiedEvent);
+      if (!moveFrame) moveFrame = window.requestAnimationFrame(flushMoves);
     };
 
     const onPointerEnd = (event: PointerEvent) => {
       starts.delete(event.pointerId);
+      pendingMoves.delete(event.pointerId);
     };
 
     const detachCanvas = () => {
@@ -104,9 +155,11 @@ export default function TouchSensitivityEnhancer() {
       activeCanvas.removeEventListener("pointercancel", onPointerEnd);
       activeCanvas = null;
       starts.clear();
+      pendingMoves.clear();
     };
 
     const syncDom = () => {
+      domFrame = 0;
       const canvas = document.querySelector<HTMLCanvasElement>(".canvas-frame canvas");
       if (canvas !== activeCanvas) {
         detachCanvas();
@@ -133,12 +186,18 @@ export default function TouchSensitivityEnhancer() {
       }
     };
 
+    const scheduleDomSync = () => {
+      if (!domFrame) domFrame = window.requestAnimationFrame(syncDom);
+    };
+
     syncDom();
-    const observer = new MutationObserver(syncDom);
+    const observer = new MutationObserver(scheduleDomSync);
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       observer.disconnect();
+      if (moveFrame) window.cancelAnimationFrame(moveFrame);
+      if (domFrame) window.cancelAnimationFrame(domFrame);
       detachCanvas();
     };
   }, [sensitivity]);
