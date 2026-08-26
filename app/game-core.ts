@@ -17,7 +17,9 @@ import {
 export const WORLD_W = 1600;
 export const WORLD_H = 900;
 export const MAX_BALLS = 3;
-export const FIXED_STEP = 1 / 120;
+// 60 Hz keeps the deterministic fixed-step gameplay while avoiding the former
+// 120 Hz double-work on the vast majority of mobile displays.
+export const FIXED_STEP = 1 / 60;
 export const MAX_FRAME_DELTA = 0.05;
 export const MAX_BALL_SPEED = 1780;
 export const MIN_HORIZONTAL_RATIO = 0.34;
@@ -190,19 +192,28 @@ export function evaluateStageObjectives(stage: CampaignStage, metrics: MatchMetr
 
 export function resolvedQuality(quality: Quality, pixelRatio = 1, hardwareConcurrency = 4, reducedMotion = false): Exclude<Quality, "auto"> {
   if (quality !== "auto") return quality;
-  if (reducedMotion || hardwareConcurrency <= 4 || pixelRatio > 2.5) return "performance";
-  if (hardwareConcurrency >= 10 && pixelRatio <= 2) return "ultra";
+  if (reducedMotion || hardwareConcurrency <= 4 || pixelRatio > 2.25) return "performance";
+  // Ultra is now reserved for clearly desktop-class conditions. Many mobile SoCs
+  // report lots of logical cores but cannot sustain heavy Canvas blur workloads.
+  if (hardwareConcurrency >= 12 && pixelRatio <= 1.75) return "ultra";
   return "high";
 }
 
 export function visualBudget(quality: Exclude<Quality, "auto">, reduceEffects = false) {
+  // Mobile-first budgets: preserve the look while capping the expensive transient
+  // work (radial gradients, shadows and GC-heavy particle/trail objects).
   const base = quality === "performance"
-    ? { particles: 120, impactScale: 0.42, trail: 13, blur: 0.35 }
+    ? { particles: 90, impactScale: 0.34, trail: 9, blur: 0.28 }
     : quality === "high"
-      ? { particles: 260, impactScale: 0.82, trail: 25, blur: 0.78 }
-      : { particles: 420, impactScale: 1.18, trail: 38, blur: 1.15 };
+      ? { particles: 170, impactScale: 0.62, trail: 16, blur: 0.58 }
+      : { particles: 260, impactScale: 0.88, trail: 24, blur: 0.86 };
   if (!reduceEffects) return base;
-  return { particles: Math.round(base.particles * 0.55), impactScale: base.impactScale * 0.55, trail: Math.max(8, Math.round(base.trail * 0.6)), blur: base.blur * 0.45 };
+  return {
+    particles: Math.round(base.particles * 0.5),
+    impactScale: base.impactScale * 0.5,
+    trail: Math.max(6, Math.round(base.trail * 0.55)),
+    blur: base.blur * 0.4,
+  };
 }
 
 export function addXp(profile: V3Profile, amount: number) {
