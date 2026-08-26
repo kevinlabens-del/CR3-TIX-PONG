@@ -22,74 +22,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Sync latest main
-        shell: bash
-        run: |
-          git fetch origin main
-          git reset --hard FETCH_HEAD
-          echo "BUILDING_SHA=$(git rev-parse HEAD)"
-
-      - name: Apply fair VORTEX boss balance
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          data = Path('app/v3-data.ts')
-          text = data.read_text()
-          text = text.replace(
-              'reaction: 32, ballSpeed: 745, winScore: 5, playerHeight: 174, enemyHeight: 205, modifier: "boss", reward: 95, aiBehavior: "boss", boss: "VORTEX"',
-              'reaction: 92, ballSpeed: 720, winScore: 5, playerHeight: 184, enemyHeight: 188, modifier: "boss", reward: 95, aiBehavior: "impulsive", boss: "VORTEX"'
-          )
-          data.write_text(text)
-
-          pong = Path('app/PongV3.tsx')
-          text = pong.read_text()
-          old = '''      } else if (boss.name === "VORTEX") {
-        boss.telegraph = boss.phase === 1 ? "RIFT OUVERT" : "DOUBLE RIFT";
-        const pairs = boss.phase === 1 ? 1 : 2;
-        for (let index = 0; index < pairs; index += 1) {
-          game.portals.push({
-            ax: WORLD_W * (0.31 + index * 0.11),
-            ay: randomRange(game.rng, 150, 750),
-            bx: WORLD_W * (0.69 - index * 0.11),
-            by: randomRange(game.rng, 150, 750),
-            radius: 48,
-            timer: 7.5,
-            owner: "arena",
-          });
-        }
-        game.portals = game.portals.slice(-4);
-        if (boss.phase === 2) for (const ball of game.balls) ball.spin += randomRange(game.rng, -190, 190);'''
-          new = '''      } else if (boss.name === "VORTEX") {
-        // Un seul rift actif : la phase 2 devient plus nerveuse, pas impossible.
-        boss.telegraph = boss.phase === 1 ? "RIFT OUVERT" : "RIFT INSTABLE";
-        game.portals = game.portals.filter((portal) => portal.owner !== "arena");
-        game.portals.push({
-          ax: WORLD_W * 0.36,
-          ay: randomRange(game.rng, 205, 695),
-          bx: WORLD_W * 0.64,
-          by: randomRange(game.rng, 205, 695),
-          radius: boss.phase === 1 ? 45 : 42,
-          timer: boss.phase === 1 ? 4.6 : 4.0,
-          owner: "arena",
-        });
-        if (boss.phase === 2) {
-          for (const ball of game.balls) ball.spin += randomRange(game.rng, -72, 72);
-          game.freeze.fire = Math.max(game.freeze.fire, 0.72);
-        }'''
-          if old not in text:
-              raise SystemExit('VORTEX boss block not found')
-          text = text.replace(old, new)
-          text = text.replace(
-              'boss.eventTimer = boss.name === "SOLARIS" ? Math.max(4.2, 7.5 - boss.phase * 0.9) : Math.max(4.6, 8 - boss.phase * 1.2);',
-              'boss.eventTimer = boss.name === "SOLARIS" ? Math.max(4.2, 7.5 - boss.phase * 0.9) : boss.name === "VORTEX" ? (boss.phase === 1 ? 8.8 : 8.2) : Math.max(4.6, 8 - boss.phase * 1.2);'
-          )
-          pong.write_text(text)
-          PY
-          grep 'id: 8, chapter: 2' app/v3-data.ts
-          grep -A22 'boss.name === "VORTEX"' app/PongV3.tsx | head -23
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -99,22 +31,13 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Apply VORTEX balance patch
+        run: node scripts/vortex-build-patch.mjs
+
       - name: Ensure touch controller TypeScript compatibility
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('app/game-state.ts')
-          text = path.read_text()
-          text = text.replace(
-              'const globalWindow = window as Window & Record<string, unknown>;',
-              'const globalWindow = window as unknown as Window & Record<string, unknown>;'
-          )
-          path.write_text(text)
-          PY
+        run: node -e "const fs=require('fs');const p='app/game-state.ts';let s=fs.readFileSync(p,'utf8');s=s.replace('const globalWindow = window as Window & Record<string, unknown>;','const globalWindow = window as unknown as Window & Record<string, unknown>;');fs.writeFileSync(p,s);"
 
       - name: Run core tests
-        continue-on-error: true
         run: npm run test:core
 
       - name: Build for GitHub Pages
