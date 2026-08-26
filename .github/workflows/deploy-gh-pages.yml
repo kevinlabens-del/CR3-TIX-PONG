@@ -29,6 +29,12 @@ jobs:
           git reset --hard FETCH_HEAD
           echo "BUILDING_SHA=$(git rev-parse HEAD)"
 
+      - name: Apply VORTEX-specific scoring windows
+        shell: bash
+        run: |
+          sed -i 's/reaction: 32, ballSpeed: 745, winScore: 5, playerHeight: 174, enemyHeight: 205, modifier: "boss", reward: 95, aiBehavior: "boss", boss: "VORTEX"/reaction: 68, ballSpeed: 745, winScore: 5, playerHeight: 174, enemyHeight: 205, modifier: "boss", reward: 95, aiBehavior: "impulsive", boss: "VORTEX"/' app/v3-data.ts
+          grep 'id: 8, chapter: 2' app/v3-data.ts
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
