@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "cr3atix-pong-";
-const CACHE = `${CACHE_PREFIX}v3.0.0-r2`;
+const CACHE = `${CACHE_PREFIX}v3.0.0-repair1`;
 const ROOT_URL = new URL("./", self.registration.scope);
 const CORE = [
   ROOT_URL.href,
@@ -30,15 +30,15 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin || !url.pathname.startsWith(ROOT_URL.pathname)) return;
 
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) caches.open(CACHE).then((cache) => cache.put(ROOT_URL.href, response.clone()));
-          return response;
-        })
-        .catch(() => caches.match(ROOT_URL.href).then((cached) => cached || Response.error())),
-    );
+  const networkFirst = () => fetch(request)
+    .then((response) => {
+      if (response.ok && response.type !== "opaque") caches.open(CACHE).then((cache) => cache.put(request.mode === "navigate" ? ROOT_URL.href : request, response.clone()));
+      return response;
+    })
+    .catch(() => caches.match(request.mode === "navigate" ? ROOT_URL.href : request).then((cached) => cached || Response.error()));
+
+  if (request.mode === "navigate" || url.pathname.includes("/_next/static/")) {
+    event.respondWith(networkFirst());
     return;
   }
 
