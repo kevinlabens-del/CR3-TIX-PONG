@@ -106,10 +106,6 @@ export function pickWeightedPowerUp(
 export function reflectedTargetY(y: number, vy: number, travelSeconds: number, minY: number, maxY: number) {
   const span = Math.max(1, maxY - minY);
   const fullTravel = Math.max(0, travelSeconds);
-
-  // Lecture volontairement humaine : l'IA suit surtout la position actuelle de
-  // la balle et ne projette qu'une très courte portion de trajectoire. Les tirs
-  // croisés et les rebonds tardifs peuvent donc réellement la prendre de vitesse.
   const predictionHorizon = Math.min(fullTravel, 0.1);
   const projected = y + vy * predictionHorizon - minY;
   const period = span * 2;
@@ -190,19 +186,28 @@ export function evaluateStageObjectives(stage: CampaignStage, metrics: MatchMetr
 
 export function resolvedQuality(quality: Quality, pixelRatio = 1, hardwareConcurrency = 4, reducedMotion = false): Exclude<Quality, "auto"> {
   if (quality !== "auto") return quality;
-  if (reducedMotion || hardwareConcurrency <= 4 || pixelRatio > 2.5) return "performance";
-  if (hardwareConcurrency >= 10 && pixelRatio <= 2) return "ultra";
+  // Sur smartphone, les écrans à forte densité rendent les flous Canvas nettement plus coûteux.
+  // On privilégie donc PERFORMANCE automatiquement sans toucher à la physique du jeu.
+  if (reducedMotion || hardwareConcurrency <= 6 || pixelRatio > 2.15) return "performance";
+  if (hardwareConcurrency >= 12 && pixelRatio <= 1.75) return "ultra";
   return "high";
 }
 
 export function visualBudget(quality: Exclude<Quality, "auto">, reduceEffects = false) {
+  // Budgets visuels volontairement conservateurs : seuls les effets transitoires sont
+  // réduits. La physique, les collisions, les vitesses, l'IA et le gameplay restent identiques.
   const base = quality === "performance"
-    ? { particles: 120, impactScale: 0.42, trail: 13, blur: 0.35 }
+    ? { particles: 72, impactScale: 0.30, trail: 8, blur: 0.22 }
     : quality === "high"
-      ? { particles: 260, impactScale: 0.82, trail: 25, blur: 0.78 }
-      : { particles: 420, impactScale: 1.18, trail: 38, blur: 1.15 };
+      ? { particles: 140, impactScale: 0.55, trail: 13, blur: 0.48 }
+      : { particles: 240, impactScale: 0.82, trail: 20, blur: 0.78 };
   if (!reduceEffects) return base;
-  return { particles: Math.round(base.particles * 0.55), impactScale: base.impactScale * 0.55, trail: Math.max(8, Math.round(base.trail * 0.6)), blur: base.blur * 0.45 };
+  return {
+    particles: Math.max(32, Math.round(base.particles * 0.5)),
+    impactScale: base.impactScale * 0.5,
+    trail: Math.max(5, Math.round(base.trail * 0.55)),
+    blur: base.blur * 0.45,
+  };
 }
 
 export function addXp(profile: V3Profile, amount: number) {
