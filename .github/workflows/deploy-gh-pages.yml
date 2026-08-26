@@ -29,6 +29,118 @@ jobs:
           git reset --hard FETCH_HEAD
           echo "BUILDING_SHA=$(git rev-parse HEAD)"
 
+      - name: Apply and persist VORTEX behavior fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('app/PongV3.tsx')
+          text = path.read_text(encoding='utf-8')
+          marker = 'const vortexRecoveryScale = vortexRecovery ? 0.48 : 1;'
+          if marker in text:
+              print('VORTEX behavior fix already present')
+          else:
+              old = '''        if (game.aiErrorTimer <= 0) {
+          const errorScale = game.aiBehavior === "defensive" ? 1.25 : game.aiBehavior === "aggressive" ? 0.62 : game.aiBehavior === "boss" ? 0.46 : 0.9;
+          game.aiError = randomRange(game.rng, -game.aiReaction, game.aiReaction) * errorScale;
+          game.aiErrorTimer = game.aiBehavior === "impulsive" ? randomRange(game.rng, 0.08, 0.22) : randomRange(game.rng, 0.15, 0.34);
+        }'''
+              new = '''        if (game.aiErrorTimer <= 0) {
+          const isVortex = game.boss?.name === "VORTEX";
+          const vortexErrorScale = game.boss?.phase === 2 ? 1.75 : 1.45;
+          const errorScale = isVortex
+            ? vortexErrorScale
+            : game.aiBehavior === "defensive" ? 1.25 : game.aiBehavior === "aggressive" ? 0.62 : game.aiBehavior === "boss" ? 0.46 : 0.9;
+          game.aiError = randomRange(game.rng, -game.aiReaction, game.aiReaction) * errorScale;
+          game.aiErrorTimer = isVortex
+            ? randomRange(game.rng, 0.34, 0.62)
+            : game.aiBehavior === "impulsive" ? randomRange(game.rng, 0.08, 0.22) : randomRange(game.rng, 0.15, 0.34);
+        }'''
+              if old not in text:
+                  raise SystemExit('VORTEX AI error block not found')
+              text = text.replace(old, new, 1)
+
+              old = '''          if (game.aiBehavior === "aggressive") target += ball.vy * 0.025;
+          if (game.aiBehavior === "defensive" && ball.vx < 0) target = WORLD_H / 2;
+          if (game.aiBehavior === "impulsive") target += Math.sin(game.elapsed * 5.2) * 46;
+          target += game.aiError;
+          if (game.reverse.fire > 0) target = WORLD_H - target;
+        }
+        const bossRage = game.boss ? 1 + (game.boss.phase - 1) * 0.09 : 1;
+        const freezeScale = game.freeze.fire > 0 ? 0.43 : 1;
+        const maxMove = game.aiSpeed * bossRage * freezeScale * dt;'''
+              new = '''          if (game.aiBehavior === "aggressive") target += ball.vy * 0.025;
+          if (game.aiBehavior === "defensive" && ball.vx < 0) target = WORLD_H / 2;
+          if (game.aiBehavior === "impulsive") target += Math.sin(game.elapsed * 5.2) * 46;
+
+          // VORTEX garde son identité prédictive, mais subit des fenêtres de
+          // récupération régulières où une trajectoire bien placée peut passer.
+          const isVortex = game.boss?.name === "VORTEX";
+          const vortexCycle = isVortex ? (game.elapsed + game.score.ice * 0.65) % 6.2 : 99;
+          const vortexRecovery = isVortex && vortexCycle < (game.boss?.phase === 2 ? 1.7 : 1.45);
+          if (vortexRecovery && ball.vx > 0) {
+            const escapeDirection = ball.y < WORLD_H / 2 ? 1 : -1;
+            target += escapeDirection * (game.boss?.phase === 2 ? 165 : 135);
+          }
+
+          target += game.aiError;
+          if (game.reverse.fire > 0) target = WORLD_H - target;
+        }
+        const bossRage = game.boss ? 1 + (game.boss.phase - 1) * 0.09 : 1;
+        const freezeScale = game.freeze.fire > 0 ? 0.43 : 1;
+        const vortexRecovery = game.boss?.name === "VORTEX" && ((game.elapsed + game.score.ice * 0.65) % 6.2) < (game.boss.phase === 2 ? 1.7 : 1.45);
+        const vortexRecoveryScale = vortexRecovery ? 0.48 : 1;
+        const maxMove = game.aiSpeed * bossRage * freezeScale * vortexRecoveryScale * dt;'''
+              if old not in text:
+                  raise SystemExit('VORTEX targeting block not found')
+              text = text.replace(old, new, 1)
+
+              old = '''      } else if (boss.name === "VORTEX") {
+        boss.telegraph = boss.phase === 1 ? "RIFT OUVERT" : "DOUBLE RIFT";
+        const pairs = boss.phase === 1 ? 1 : 2;
+        for (let index = 0; index < pairs; index += 1) {
+          game.portals.push({
+            ax: WORLD_W * (0.31 + index * 0.11),
+            ay: randomRange(game.rng, 150, 750),
+            bx: WORLD_W * (0.69 - index * 0.11),
+            by: randomRange(game.rng, 150, 750),
+            radius: 48,
+            timer: 7.5,
+            owner: "arena",
+          });
+        }
+        game.portals = game.portals.slice(-4);
+        if (boss.phase === 2) for (const ball of game.balls) ball.spin += randomRange(game.rng, -190, 190);'''
+              new = '''      } else if (boss.name === "VORTEX") {
+        boss.telegraph = boss.phase === 1 ? "RIFT OUVERT" : "DOUBLE RIFT";
+        const pairs = boss.phase === 1 ? 1 : 2;
+        for (let index = 0; index < pairs; index += 1) {
+          game.portals.push({
+            ax: WORLD_W * (0.31 + index * 0.11),
+            ay: randomRange(game.rng, 150, 750),
+            bx: WORLD_W * (0.69 - index * 0.11),
+            by: randomRange(game.rng, 150, 750),
+            radius: 44,
+            timer: boss.phase === 1 ? 5.8 : 5.2,
+            owner: "arena",
+          });
+        }
+        game.portals = game.portals.slice(-4);
+        if (boss.phase === 2) for (const ball of game.balls) ball.spin += randomRange(game.rng, -90, 90);'''
+              if old not in text:
+                  raise SystemExit('VORTEX portal block not found')
+              text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
+              print('VORTEX behavior fix applied')
+          PY
+          if ! git diff --quiet -- app/PongV3.tsx; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/PongV3.tsx
+            git commit -m "fix: give VORTEX fair scoring windows"
+            git push origin HEAD:main
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
