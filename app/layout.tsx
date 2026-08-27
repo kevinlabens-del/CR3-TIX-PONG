@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -51,7 +52,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Script
+          src="https://kevinlabens-del.github.io/CR3-TIX-ANALYTIX./analytics.js"
+          data-project-id="ac6edcd4-e66c-4384-ace9-43a0577e03ec"
+          data-project-key="5b50f153-a241-49ae-8325-2235d8f49cee"
+          strategy="afterInteractive"
+        />
+      </body>
     </html>
   );
 }
