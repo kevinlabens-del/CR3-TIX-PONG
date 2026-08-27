@@ -35,6 +35,7 @@ export type SweepBall = {
 export type SweepPaddle = {
   x: number;
   y: number;
+  previousY?: number;
   width: number;
   height: number;
 };
@@ -132,9 +133,19 @@ export function sweptPaddleCollision(
   if (!crosses) return null;
   const time = (contactX - ball.x) / ball.vx;
   if (!Number.isFinite(time) || time < -1e-6 || time > dt + 1e-6) return null;
-  const contactY = ball.y + ball.vy * Math.max(0, time);
-  if (contactY + ball.radius < paddle.y || contactY - ball.radius > paddle.y + paddle.height) return null;
-  return { time: Math.max(0, time), x: contactX, y: contactY };
+  const safeTime = Math.max(0, time);
+  const contactY = ball.y + ball.vy * safeTime;
+
+  // La raquette est mise à jour avant la balle. Sur un mouvement tactile rapide,
+  // tester uniquement sa position finale peut faire rater un contact de bord alors
+  // que la raquette se trouvait bien sous la balle au moment exact de l'impact.
+  // On reconstruit donc sa position verticale au temps de collision.
+  const startY = Number.isFinite(paddle.previousY) ? paddle.previousY as number : paddle.y;
+  const alpha = dt > 0 ? Math.max(0, Math.min(1, safeTime / dt)) : 1;
+  const paddleYAtContact = startY + (paddle.y - startY) * alpha;
+  if (contactY + ball.radius < paddleYAtContact || contactY - ball.radius > paddleYAtContact + paddle.height) return null;
+
+  return { time: safeTime, x: contactX, y: contactY };
 }
 
 export function stableBallVelocity(vx: number, vy: number, preferredDirection: -1 | 1, maxSpeed = MAX_BALL_SPEED) {
