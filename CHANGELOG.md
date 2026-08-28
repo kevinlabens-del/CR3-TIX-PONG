@@ -2,6 +2,23 @@
 
 Toutes les évolutions notables de CR3@TIX PONG sont consignées ici.
 
+## [3.0.2] — 2026-08-28
+
+### Collision et tactile
+
+- collision continue étendue à toute la raquette : face, extrémités et coins ;
+- calcul relatif balle/raquette pour intercepter les mouvements tactiles rapides ;
+- conservation du début complet du geste entre deux pas de physique ;
+- angle de rebond calculé avec la position réelle de la raquette à l’impact ;
+- collision des clones synchronisée avec leur déplacement visuel.
+
+### Validation et déploiement
+
+- tests de régression symétriques sur les bords haut/bas et les déplacements tactiles ;
+- équilibrage VORTEX intégré directement au code source ;
+- pipeline reproductible avec lint et tests désormais bloquants ;
+- cache hors connexion aligné sur la version 3.0.2.
+
 ## [3.0.0] — 2026-08-22
 
 ### Base et stabilité

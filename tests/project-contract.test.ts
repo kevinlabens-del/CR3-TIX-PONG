@@ -8,6 +8,7 @@ const data = readFileSync(new URL("../app/v3-data.ts", import.meta.url), "utf8")
 const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
 const manifest = JSON.parse(readFileSync(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
+const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const nextConfig = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
 
 test("les treize power-ups possèdent une branche de gameplay", () => {
@@ -28,7 +29,7 @@ test("les trois boss ont des mécaniques dédiées et des phases", () => {
   }
   assert.match(page, /PHASE/);
   assert.match(page, /MUR DE GLACE/);
-  assert.match(page, /DOUBLE RIFT/);
+  assert.match(page, /RIFT INSTABLE/);
   assert.match(page, /SUPERNOVA/);
 });
 
@@ -61,6 +62,8 @@ test("le contrôleur tactile V3 suit précisément le doigt et protège le Duel"
   assert.match(state, /game\.reverse\[side\]/);
   assert.match(state, /game\.freeze\[side\] <= 0/);
   assert.match(state, /touchVelocity/);
+  assert.match(state, /rememberPaddleSweepStart/);
+  assert.match(page, /consumePaddleSweepStart/);
 });
 
 test("la physique utilise un pas fixe et une collision continue", () => {
@@ -83,7 +86,8 @@ test("le manifest et le service worker sont compatibles racine et sous-chemin", 
   assert.equal(manifest.start_url, "./");
   assert.equal(manifest.scope, "./");
   assert.equal(manifest.name, "CR3@TIX PONG V3");
-  assert.match(serviceWorker, /cr3atix-pong-.*v3\.0\.0/s);
+  const escapedVersion = String(packageJson.version).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  assert.match(serviceWorker, new RegExp(`v${escapedVersion}`));
   assert.match(serviceWorker, /self\.registration\.scope/);
   assert.match(serviceWorker, /key\.startsWith\(CACHE_PREFIX\)/);
   assert.match(nextConfig, /\/CR3-TIX-PONG/);

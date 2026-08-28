@@ -17,6 +17,7 @@ export type Paddle = {
   x: number;
   y: number;
   previousY: number;
+  sweepStartY: number | null;
   targetY: number;
   width: number;
   height: number;
@@ -221,6 +222,7 @@ function makePaddle(x: number, height: number): Paddle {
     x,
     y: WORLD_H / 2 - height / 2,
     previousY: WORLD_H / 2 - height / 2,
+    sweepStartY: null,
     targetY: WORLD_H / 2,
     width: 24,
     height,
@@ -237,7 +239,7 @@ function makePaddle(x: number, height: number): Paddle {
       return meta.physicsVelocity;
     },
     set(value: number) {
-      meta.physicsVelocity = Number.isFinite(value) ? value : 0;
+      meta.physicsVelocity = Math.max(-2200, Math.min(2200, Number.isFinite(value) ? value : 0));
     },
   });
   return paddle;
@@ -249,6 +251,16 @@ function markTouchVelocity(paddle: Paddle, velocity: number, active: boolean) {
   meta.touchActive = active;
   meta.touchVelocity = Math.max(-2200, Math.min(2200, Number.isFinite(velocity) ? velocity : 0));
   meta.lastTouchUpdate = nowMs();
+}
+
+export function rememberPaddleSweepStart(paddle: Paddle) {
+  if (paddle.sweepStartY === null || !Number.isFinite(paddle.sweepStartY)) paddle.sweepStartY = paddle.y;
+}
+
+export function consumePaddleSweepStart(paddle: Paddle) {
+  const startY = paddle.sweepStartY !== null && Number.isFinite(paddle.sweepStartY) ? paddle.sweepStartY : paddle.y;
+  paddle.sweepStartY = null;
+  return startY;
 }
 
 function paddleForSide(game: GameState, side: ElementSide) {
@@ -337,7 +349,7 @@ function installTouchPrecisionController() {
       // Hors effet de gel volontaire, la raquette suit exactement le doigt.
       if (game.freeze[side] <= 0) {
         const nextTop = Math.max(22, Math.min(WORLD_H - paddle.height - 22, desiredCenter - paddle.height / 2));
-        paddle.previousY = paddle.y;
+        rememberPaddleSweepStart(paddle);
         paddle.y = nextTop;
       }
 

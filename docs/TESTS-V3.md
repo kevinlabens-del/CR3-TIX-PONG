@@ -1,4 +1,4 @@
-# Validation CR3@TIX PONG V3.0.0
+# Validation CR3@TIX PONG V3.0.2
 
 ## Commande de release
 
@@ -14,7 +14,8 @@ Le test intégral inclut les tests Node, le build applicatif et l’export GitHu
 - intégrité des 12 arènes, 36 objectifs, 40 succès et 13 power-ups ;
 - raretés, pondération et RNG déterministe ;
 - défi quotidien identique pour une date donnée ;
-- collision continue à vitesse maximale ;
+- collision continue à vitesse maximale sur la face et les quatre extrémités ;
+- balayage complet des raquettes pendant les gestes tactiles rapides ;
 - 10 000 trajectoires physiques sans vitesse invalide ni angle bloqué ;
 - prédiction IA avec rebonds ;
 - combo, objectifs, XP, migration V2 → V3 et import de sauvegarde ;

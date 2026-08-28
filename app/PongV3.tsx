@@ -31,6 +31,7 @@ import {
 } from "./game-core";
 import {
   DEFAULT_DUEL_CONFIG,
+  consumePaddleSweepStart,
   freshGame,
   launchServe,
   makeBall,
@@ -883,21 +884,21 @@ export default function PongV3() {
           game.slowMotion = Math.max(game.slowMotion, 1.1);
         }
       } else if (boss.name === "VORTEX") {
-        boss.telegraph = boss.phase === 1 ? "RIFT OUVERT" : "DOUBLE RIFT";
-        const pairs = boss.phase === 1 ? 1 : 2;
-        for (let index = 0; index < pairs; index += 1) {
-          game.portals.push({
-            ax: WORLD_W * (0.31 + index * 0.11),
-            ay: randomRange(game.rng, 150, 750),
-            bx: WORLD_W * (0.69 - index * 0.11),
-            by: randomRange(game.rng, 150, 750),
-            radius: 48,
-            timer: 7.5,
-            owner: "arena",
-          });
+        boss.telegraph = boss.phase === 1 ? "RIFT OUVERT" : "RIFT INSTABLE";
+        game.portals = game.portals.filter((portal) => portal.owner !== "arena");
+        game.portals.push({
+          ax: WORLD_W * 0.36,
+          ay: randomRange(game.rng, 205, 695),
+          bx: WORLD_W * 0.64,
+          by: randomRange(game.rng, 205, 695),
+          radius: boss.phase === 1 ? 45 : 42,
+          timer: boss.phase === 1 ? 4.6 : 4.0,
+          owner: "arena",
+        });
+        if (boss.phase === 2) {
+          for (const ball of game.balls) ball.spin += randomRange(game.rng, -72, 72);
+          game.freeze.fire = Math.max(game.freeze.fire, 0.72);
         }
-        game.portals = game.portals.slice(-4);
-        if (boss.phase === 2) for (const ball of game.balls) ball.spin += randomRange(game.rng, -190, 190);
       } else {
         if (boss.phase === 1) {
           boss.telegraph = "BOUCLIER SOLAIRE";
@@ -912,7 +913,7 @@ export default function PongV3() {
         }
       }
       boss.telegraphTimer = 1.4;
-      boss.eventTimer = boss.name === "SOLARIS" ? Math.max(4.2, 7.5 - boss.phase * 0.9) : Math.max(4.6, 8 - boss.phase * 1.2);
+      boss.eventTimer = boss.name === "SOLARIS" ? Math.max(4.2, 7.5 - boss.phase * 0.9) : boss.name === "VORTEX" ? (boss.phase === 1 ? 8.8 : 8.2) : Math.max(4.6, 8 - boss.phase * 1.2);
       announce("fire", boss.name, boss.telegraph, 1800);
       playSound("boss", "fire");
     };
@@ -1025,6 +1026,7 @@ export default function PongV3() {
 
       for (const [index, paddle] of [game.left, game.right].entries()) {
         const side: ElementSide = index === 0 ? "ice" : "fire";
+        const sweepStartY = consumePaddleSweepStart(paddle);
         paddle.boostTimer = Math.max(0, paddle.boostTimer - dt);
         const centerBeforeResize = paddle.y + paddle.height / 2;
         const pressureScale = side === "ice" && game.pressureActive > 0 ? 0.62 : 1;
@@ -1032,13 +1034,12 @@ export default function PongV3() {
         paddle.height += (desiredHeight - paddle.height) * Math.min(1, dt * 8);
         paddle.y = centerBeforeResize - paddle.height / 2;
         paddle.targetY = clamp(paddle.targetY, paddle.height / 2 + 24, WORLD_H - paddle.height / 2 - 24);
-        const before = paddle.y;
-        paddle.previousY = before;
+        paddle.previousY = sweepStartY;
         const freezeScale = game.freeze[side] > 0 ? 0.36 : 1;
         const targetTop = paddle.targetY - paddle.height / 2;
         paddle.y += (targetTop - paddle.y) * Math.min(1, dt * 16 * freezeScale);
         paddle.y = clamp(paddle.y, 22, WORLD_H - paddle.height - 22);
-        paddle.velocity = (paddle.y - before) / Math.max(dt, 0.001);
+        paddle.velocity = (paddle.y - sweepStartY) / Math.max(dt, 0.001);
       }
 
       if (game.mode === "tutorial" && tutorialStepRef.current === 0 && Math.abs(game.left.velocity) > 45) {
@@ -1104,12 +1105,15 @@ export default function PongV3() {
     const paddleHitCandidates = (ball: Ball, dt: number) => {
       const candidates: Array<{ hit: NonNullable<ReturnType<typeof sweptPaddleCollision>>; paddle: Paddle; side: ElementSide; clone: boolean }> = [];
       const add = (paddle: Paddle, side: ElementSide, clone = false) => {
+        const cloneHeight = paddle.height * 0.48;
+        const cloneY = (paddleY: number) => clamp(paddleY + paddle.height / 2 - cloneHeight / 2 + Math.sin(paddleY * 0.015) * 25, 22, WORLD_H - cloneHeight - 22);
         const rect = clone
           ? {
               x: paddle.x + (side === "ice" ? 70 : -55),
-              y: clamp(paddle.y + paddle.height / 2 - paddle.height * 0.24 + Math.sin(paddle.y * 0.015) * 25, 22, WORLD_H - paddle.height * 0.48 - 22),
+              y: cloneY(paddle.y),
+              previousY: cloneY(paddle.previousY),
               width: paddle.width * 0.72,
-              height: paddle.height * 0.48,
+              height: cloneHeight,
             }
           : paddle;
         const hit = sweptPaddleCollision(ball, rect, side, dt);
@@ -1127,9 +1131,7 @@ export default function PongV3() {
       const { hit, paddle, side, clone } = candidate;
       const isLeft = side === "ice";
       const effectiveHeight = clone ? paddle.height * 0.48 : paddle.height;
-      const effectiveY = clone
-        ? clamp(paddle.y + paddle.height / 2 - effectiveHeight / 2 + Math.sin(paddle.y * 0.015) * 25, 22, WORLD_H - effectiveHeight - 22)
-        : paddle.y;
+      const effectiveY = hit.paddleY;
       const offset = clamp((hit.y - (effectiveY + effectiveHeight / 2)) / (effectiveHeight / 2), -1, 1);
       const perfect = Math.abs(offset) <= 0.125 && !clone;
       const smash = Math.abs(paddle.velocity) >= 690 && !clone;
@@ -1619,7 +1621,7 @@ export default function PongV3() {
       {screen === "menu" ? (
         <section className="menu-panel" aria-labelledby="game-title">
           <div className="menu-topbar">
-            <div className="brand-chip"><span className="brand-dot" /> CR3@TIX GAME LAB <b>V3.0.0</b></div>
+            <div className="brand-chip"><span className="brand-dot" /> CR3@TIX GAME LAB <b>V3.0.2</b></div>
             <div className="menu-actions">
               <button className="utility-button" onClick={() => setShowGuide(true)} aria-label="Afficher les règles">?</button>
               <button className="utility-button" onClick={enterFullscreen} aria-label="Afficher en plein écran">⛶</button>
@@ -1631,7 +1633,7 @@ export default function PongV3() {
           <div className="title-wrap">
             <p className="eyebrow">COMBAT ARCADE ÉLÉMENTAIRE</p>
             <h1 id="game-title"><span className="ice-text">CR3@TIX</span><span className="fire-text">PONG</span></h1>
-            <span className="v3-mark">VERSION 3.0.0 · GLACE CONTRE FEU</span>
+            <span className="v3-mark">VERSION 3.0.2 · GLACE CONTRE FEU</span>
             <p className="lead">Maîtrise la précision, déchaîne ton Ultimate et terrasse les gardiens des douze arènes.</p>
           </div>
 
@@ -2041,7 +2043,7 @@ export default function PongV3() {
 
       {importError && <div className="error-toast" role="alert"><strong>IMPORT IMPOSSIBLE</strong><span>{importError}</span><button onClick={() => setImportError("")}>×</button></div>}
 
-      {screen === "menu" && <footer><span>CR3@TIX</span><small>DE L’IMAGINATION À LA CONCEPTION</small><b>V3.0.0</b></footer>}
+      {screen === "menu" && <footer><span>CR3@TIX</span><small>DE L’IMAGINATION À LA CONCEPTION</small><b>V3.0.2</b></footer>}
     </main>
   );
 }

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "cr3atix-pong-";
-const CACHE = `${CACHE_PREFIX}v3.0.1-performance-safe`;
+const CACHE = `${CACHE_PREFIX}v3.0.2-collision-safe`;
 const ROOT_URL = new URL("./", self.registration.scope);
 const CORE = [
   ROOT_URL.href,

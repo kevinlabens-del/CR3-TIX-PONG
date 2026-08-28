@@ -126,26 +126,42 @@ export function sweptPaddleCollision(
   dt: number,
 ) {
   const isLeft = side === "ice";
-  if ((isLeft && ball.vx >= 0) || (!isLeft && ball.vx <= 0)) return null;
-  const contactX = isLeft ? paddle.x + paddle.width + ball.radius : paddle.x - ball.radius;
-  const nextX = ball.x + ball.vx * dt;
-  const crosses = isLeft ? ball.x >= contactX && nextX <= contactX : ball.x <= contactX && nextX >= contactX;
-  if (!crosses) return null;
-  const time = (contactX - ball.x) / ball.vx;
-  if (!Number.isFinite(time) || time < -1e-6 || time > dt + 1e-6) return null;
-  const safeTime = Math.max(0, time);
-  const contactY = ball.y + ball.vy * safeTime;
+  if (!Number.isFinite(dt) || dt <= 0 || (isLeft && ball.vx >= 0) || (!isLeft && ball.vx <= 0)) return null;
 
-  // La raquette est mise à jour avant la balle. Sur un mouvement tactile rapide,
-  // tester uniquement sa position finale peut faire rater un contact de bord alors
-  // que la raquette se trouvait bien sous la balle au moment exact de l'impact.
-  // On reconstruit donc sa position verticale au temps de collision.
+  // La collision est calculée dans le repère de la raquette. Le cercle devient un
+  // point et la raquette est agrandie du rayon de la balle (somme de Minkowski).
+  // Cette approche balaie toute la surface : face, extrémités et coins. Elle reste
+  // valide lorsque la balle a déjà franchi la face verticale mais touche ensuite
+  // un bord pendant le même pas fixe, cas qui provoquait le tunneling observé.
   const startY = Number.isFinite(paddle.previousY) ? paddle.previousY as number : paddle.y;
-  const alpha = dt > 0 ? Math.max(0, Math.min(1, safeTime / dt)) : 1;
-  const paddleYAtContact = startY + (paddle.y - startY) * alpha;
-  if (contactY + ball.radius < paddleYAtContact || contactY - ball.radius > paddleYAtContact + paddle.height) return null;
+  const paddleVy = (paddle.y - startY) / dt;
+  const relativeY = ball.y - startY;
+  const relativeVy = ball.vy - paddleVy;
+  const epsilon = 1e-8;
 
-  return { time: safeTime, x: contactX, y: contactY };
+  const axisInterval = (origin: number, velocity: number, min: number, max: number) => {
+    if (Math.abs(velocity) <= epsilon) return origin >= min - epsilon && origin <= max + epsilon ? { enter: -Infinity, exit: Infinity } : null;
+    const first = (min - origin) / velocity;
+    const second = (max - origin) / velocity;
+    return { enter: Math.min(first, second), exit: Math.max(first, second) };
+  };
+
+  const xInterval = axisInterval(ball.x, ball.vx, paddle.x - ball.radius, paddle.x + paddle.width + ball.radius);
+  const yInterval = axisInterval(relativeY, relativeVy, -ball.radius, paddle.height + ball.radius);
+  if (!xInterval || !yInterval) return null;
+
+  const enter = Math.max(0, xInterval.enter, yInterval.enter);
+  const exit = Math.min(dt, xInterval.exit, yInterval.exit);
+  if (!Number.isFinite(enter) || enter > exit + epsilon || enter > dt + epsilon || exit < -epsilon) return null;
+
+  const safeTime = Math.max(0, Math.min(dt, enter));
+  const paddleYAtContact = startY + paddleVy * safeTime;
+  return {
+    time: safeTime,
+    x: ball.x + ball.vx * safeTime,
+    y: ball.y + ball.vy * safeTime,
+    paddleY: paddleYAtContact,
+  };
 }
 
 export function stableBallVelocity(vx: number, vy: number, preferredDirection: -1 | 1, maxSpeed = MAX_BALL_SPEED) {

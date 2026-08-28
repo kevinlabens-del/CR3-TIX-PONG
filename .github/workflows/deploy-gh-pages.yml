@@ -29,16 +29,12 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
-      - name: Apply VORTEX balance patch
-        run: node scripts/vortex-build-patch.mjs
-
-      - name: Ensure touch controller TypeScript compatibility
-        run: node -e "const fs=require('fs');const p='app/game-state.ts';let s=fs.readFileSync(p,'utf8');s=s.replace('const globalWindow = window as Window & Record<string, unknown>;','const globalWindow = window as unknown as Window & Record<string, unknown>;');fs.writeFileSync(p,s);"
+      - name: Lint
+        run: npm run lint
 
       - name: Run core tests
-        continue-on-error: true
         run: npm run test:core
 
       - name: Build for GitHub Pages

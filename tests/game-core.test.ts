@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  FIXED_STEP,
   MAX_BALL_SPEED,
   achievementValue,
   addXp,
@@ -15,7 +16,13 @@ import {
   sweptPaddleCollision,
   visualBudget,
 } from "../app/game-core";
-import { freshGame, makeBall } from "../app/game-state";
+import {
+  consumePaddleSweepStart,
+  freshGame,
+  makeBall,
+  rememberPaddleSweepStart,
+  type Paddle,
+} from "../app/game-state";
 import {
   ACHIEVEMENTS,
   CAMPAIGN_STAGES,
@@ -68,6 +75,45 @@ test("la collision continue intercepte une balle à vitesse maximale", () => {
 test("la collision continue rejette une balle hors de la raquette", () => {
   const hit = sweptPaddleCollision({ x: 170, y: 40, vx: -1700, vy: 0, radius: 19 }, { x: 68, y: 350, width: 24, height: 180 }, "ice", 1 / 12);
   assert.equal(hit, null);
+});
+
+test("les quatre extrémités interceptent la balle après le franchissement de la face", () => {
+  const cases = [
+    { label: "haut gauche", side: "ice" as const, paddleX: 68, x: 120, y: 330, vx: -1200, vy: 1000 },
+    { label: "bas gauche", side: "ice" as const, paddleX: 68, x: 120, y: 570, vx: -1200, vy: -1000 },
+    { label: "haut droit", side: "fire" as const, paddleX: 1508, x: 1480, y: 330, vx: 1200, vy: 1000 },
+    { label: "bas droit", side: "fire" as const, paddleX: 1508, x: 1480, y: 570, vx: 1200, vy: -1000 },
+  ];
+
+  for (const entry of cases) {
+    const paddle = { x: entry.paddleX, y: 360, width: 24, height: 180 };
+    const ball = { x: entry.x, y: entry.y, vx: entry.vx, vy: entry.vy, radius: 19 };
+    assert.equal(sweptPaddleCollision(ball, paddle, entry.side, FIXED_STEP), null, `${entry.label} ne doit pas réagir avant le contact`);
+    ball.x += ball.vx * FIXED_STEP;
+    ball.y += ball.vy * FIXED_STEP;
+    const hit = sweptPaddleCollision(ball, paddle, entry.side, FIXED_STEP);
+    assert.ok(hit, `${entry.label} doit intercepter la balle au second sous-pas`);
+    assert.ok(hit.time >= 0 && hit.time <= FIXED_STEP);
+  }
+});
+
+test("la collision utilise la position exacte d’une raquette tactile en mouvement", () => {
+  const ball = { x: 120, y: 400, vx: -1200, vy: 0, radius: 19 };
+  const paddle = { x: 68, y: 200, previousY: 500, width: 24, height: 180 };
+  const hit = sweptPaddleCollision(ball, paddle, "ice", FIXED_STEP);
+  assert.ok(hit);
+  assert.ok(Math.abs(hit.paddleY - 230) < 1e-7);
+});
+
+test("plusieurs échantillons tactiles conservent le début complet du balayage", () => {
+  const paddle = { y: 500, sweepStartY: null } as Paddle;
+  rememberPaddleSweepStart(paddle);
+  paddle.y = 350;
+  rememberPaddleSweepStart(paddle);
+  paddle.y = 200;
+  assert.equal(consumePaddleSweepStart(paddle), 500);
+  assert.equal(paddle.sweepStartY, null);
+  assert.equal(consumePaddleSweepStart(paddle), 200);
 });
 
 test("10 000 trajectoires rapides restent mathématiquement stables", () => {

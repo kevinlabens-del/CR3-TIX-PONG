@@ -1,4 +1,4 @@
-# CR3@TIX PONG V3.0.0
+# CR3@TIX PONG V3.0.2
 
 **De l’imagination à la conception**
 

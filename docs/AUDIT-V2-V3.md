@@ -36,7 +36,7 @@ L’archive officielle fournie a été extraite puis analysée avant toute modif
 - RNG seedé pour les événements de match et le défi quotidien ;
 - missions évaluées séparément, une étoile par objectif ;
 - migration V2 → V3 qui ne supprime aucune clé historique ;
-- cache `cr3atix-pong-v3.0.0` et suppression ciblée des anciens caches CR3@TIX PONG ;
+- cache versionné `cr3atix-pong-v3.0.2-collision-safe` et suppression ciblée des anciens caches CR3@TIX PONG ;
 - tests unitaires et contractuels couvrant les invariants critiques.
 
 ## Compatibilité future
