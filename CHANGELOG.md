@@ -1,3 +1,9 @@
+# V3.1.1 — Vérification de la campagne
+
+- Affichage du nombre réel d’arènes sur l’accueil.
+- Objectifs de combo plafonnés à ×5, maximum du moteur.
+- Tests de démarrage et de faisabilité des objectifs sur les 50 arènes, et de fin de campagne.
+
 # V3.1.0 — Campagne de 50 niveaux
 
 - Ajout des arènes 13 à 50 et de sept chapitres.

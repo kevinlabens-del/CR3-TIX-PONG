@@ -26,6 +26,7 @@ import {
 import {
   ACHIEVEMENTS,
   CAMPAIGN_STAGES,
+  CHAPTERS,
   DEFAULT_PROFILE,
   ELEMENT_SKINS,
   POWER_UPS,
@@ -214,4 +215,30 @@ test("les succès utilisent les statistiques et les étoiles locales", () => {
   assert.deepEqual(profile.completedObjectives["12"], ["s12-win"]);
   const finished = normalizeProfile({ ...profile, completedObjectives: { "50": ["s50-win"] } });
   assert.equal(finished.unlockedStage, 50);
+});
+
+
+test("les 50 arènes démarrent avec des objectifs réalisables", () => {
+  const maxCombo = comboForRally(10000, 10000);
+  for (const stage of CAMPAIGN_STAGES) {
+    assert.ok(CHAPTERS.some((chapter) => chapter.id === stage.chapter));
+    for (const objective of stage.objectives) {
+      if (objective.kind === "combo") assert.ok(objective.target <= maxCombo, `combo impossible dans l’arène ${stage.id}`);
+    }
+    const game = freshGame("campaign", "arcade", ELEMENT_SKINS[0], stage);
+    assert.equal(game.winScore, stage.winScore);
+    assert.equal(game.campaignStage?.id, stage.id);
+    assert.ok(game.launchSpeed > 0 && game.launchSpeed <= MAX_BALL_SPEED);
+    assert.equal(game.boss?.name, stage.boss);
+    const objectives = evaluateStageObjectives(stage, { won: true, conceded: 0, bestRally: 100, perfectHits: 100, smashes: 100, bestCombo: maxCombo, duration: 60, ultimates: 0 });
+    assert.equal(objectives.length, 3, `étoiles inaccessibles dans l’arène ${stage.id}`);
+  }
+});
+
+test("le succès de fin exige les 50 victoires", () => {
+  const achievement = ACHIEVEMENTS.find((entry) => entry.stat === "campaignComplete")!;
+  const victories = Object.fromEntries(CAMPAIGN_STAGES.map((stage) => [String(stage.id), [stage.objectives[0].id]]));
+  assert.equal(achievementValue(achievement, normalizeProfile({ ...DEFAULT_PROFILE, completedObjectives: victories })), 1);
+  delete victories["49"];
+  assert.equal(achievementValue(achievement, normalizeProfile({ ...DEFAULT_PROFILE, completedObjectives: victories })), 0);
 });

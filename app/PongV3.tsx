@@ -1621,7 +1621,7 @@ export default function PongV3() {
       {screen === "menu" ? (
         <section className="menu-panel" aria-labelledby="game-title">
           <div className="menu-topbar">
-            <div className="brand-chip"><span className="brand-dot" /> CR3@TIX GAME LAB <b>V3.1.0</b></div>
+            <div className="brand-chip"><span className="brand-dot" /> CR3@TIX GAME LAB <b>V3.1.1</b></div>
             <div className="menu-actions">
               <button className="utility-button" onClick={() => setShowGuide(true)} aria-label="Afficher les règles">?</button>
               <button className="utility-button" onClick={enterFullscreen} aria-label="Afficher en plein écran">⛶</button>
@@ -1633,8 +1633,8 @@ export default function PongV3() {
           <div className="title-wrap">
             <p className="eyebrow">COMBAT ARCADE ÉLÉMENTAIRE</p>
             <h1 id="game-title"><span className="ice-text">CR3@TIX</span><span className="fire-text">PONG</span></h1>
-            <span className="v3-mark">VERSION 3.1.0 · GLACE CONTRE FEU</span>
-            <p className="lead">Maîtrise la précision, déchaîne ton Ultimate et terrasse les gardiens des douze arènes.</p>
+            <span className="v3-mark">VERSION 3.1.1 · GLACE CONTRE FEU</span>
+            <p className="lead">Maîtrise la précision, déchaîne ton Ultimate et terrasse les gardiens des {CAMPAIGN_STAGES.length} arènes.</p>
           </div>
 
           <div className="profile-strip">
@@ -1906,7 +1906,7 @@ export default function PongV3() {
           )}
 
           <div className="feature-row" aria-label="Fonctionnalités principales">
-            <span>✦ 12 ARÈNES</span><i /><span>♛ 3 BOSS MULTI-PHASES</span><i /><span>◉ 13 POWER-UPS</span><i /><span>∞ HORS LIGNE</span>
+            <span>✦ {CAMPAIGN_STAGES.length} ARÈNES</span><i /><span>♛ 3 BOSS MULTI-PHASES</span><i /><span>◉ 13 POWER-UPS</span><i /><span>∞ HORS LIGNE</span>
           </div>
         </section>
       ) : (
@@ -2043,7 +2043,7 @@ export default function PongV3() {
 
       {importError && <div className="error-toast" role="alert"><strong>IMPORT IMPOSSIBLE</strong><span>{importError}</span><button onClick={() => setImportError("")}>×</button></div>}
 
-      {screen === "menu" && <footer><span>CR3@TIX</span><small>DE L’IMAGINATION À LA CONCEPTION</small><b>V3.1.0</b></footer>}
+      {screen === "menu" && <footer><span>CR3@TIX</span><small>DE L’IMAGINATION À LA CONCEPTION</small><b>V3.1.1</b></footer>}
     </main>
   );
 }
