@@ -609,7 +609,7 @@ export default function PongV3() {
       const newStars = Math.max(0, starsEarned - previousStars);
       shardReward = (won && previousStars === 0 ? game.campaignStage.reward : Math.ceil(game.campaignStage.reward * 0.24)) + newStars * 12;
       if (won) {
-        nextStage = game.campaignStage.id < 12 ? game.campaignStage.id + 1 : null;
+        nextStage = game.campaignStage.id < CAMPAIGN_STAGES.length ? game.campaignStage.id + 1 : null;
         unlockedStage = Math.max(unlockedStage, nextStage ?? game.campaignStage.id);
       }
     } else if (game.mode === "survival") {
@@ -1621,7 +1621,7 @@ export default function PongV3() {
       {screen === "menu" ? (
         <section className="menu-panel" aria-labelledby="game-title">
           <div className="menu-topbar">
-            <div className="brand-chip"><span className="brand-dot" /> CR3@TIX GAME LAB <b>V3.0.2</b></div>
+            <div className="brand-chip"><span className="brand-dot" /> CR3@TIX GAME LAB <b>V3.1.0</b></div>
             <div className="menu-actions">
               <button className="utility-button" onClick={() => setShowGuide(true)} aria-label="Afficher les règles">?</button>
               <button className="utility-button" onClick={enterFullscreen} aria-label="Afficher en plein écran">⛶</button>
@@ -1633,7 +1633,7 @@ export default function PongV3() {
           <div className="title-wrap">
             <p className="eyebrow">COMBAT ARCADE ÉLÉMENTAIRE</p>
             <h1 id="game-title"><span className="ice-text">CR3@TIX</span><span className="fire-text">PONG</span></h1>
-            <span className="v3-mark">VERSION 3.0.2 · GLACE CONTRE FEU</span>
+            <span className="v3-mark">VERSION 3.1.0 · GLACE CONTRE FEU</span>
             <p className="lead">Maîtrise la précision, déchaîne ton Ultimate et terrasse les gardiens des douze arènes.</p>
           </div>
 
@@ -1718,9 +1718,9 @@ export default function PongV3() {
             <div className="tab-content campaign-panel">
               <div className="panel-heading">
                 <div><span>MODE HISTOIRE</span><h2>LA ROUTE DE L’ASCENSION</h2><p>Une étoile par objectif. Les mécaniques, les arènes et les trois gardiens évoluent réellement.</p></div>
-                <div className="currency-card"><strong>{totalStars}<i>/36</i></strong><small>ÉTOILES</small></div>
+                <div className="currency-card"><strong>{totalStars}<i>/{CAMPAIGN_STAGES.length * 3}</i></strong><small>ÉTOILES</small></div>
               </div>
-              <div className="campaign-progress"><span style={{ width: `${Math.min(100, (completedStages / CAMPAIGN_STAGES.length) * 100)}%` }} /><strong>{completedStages}/12 CONQUISES</strong></div>
+              <div className="campaign-progress"><span style={{ width: `${Math.min(100, (completedStages / CAMPAIGN_STAGES.length) * 100)}%` }} /><strong>{completedStages}/{CAMPAIGN_STAGES.length} CONQUISES</strong></div>
               {CHAPTERS.map((chapter) => (
                 <section className={`chapter chapter-${chapter.id}`} key={chapter.id}>
                   <header><span style={{ color: chapter.color }}>{chapter.label}</span><strong>{chapter.name}</strong><em>{chapter.description}</em></header>
@@ -1845,7 +1845,7 @@ export default function PongV3() {
                 <article><small>POWER-UP FAVORI</small><strong className="small-stat">{favoritePower}</strong></article>
                 <article><small>SURVIVAL</small><strong>{formatTime(profile.stats.survivalBest)}</strong></article>
                 <article><small>BOSS RUSH</small><strong>{profile.stats.bossRushBest ? formatTime(profile.stats.bossRushBest, true) : "—"}</strong></article>
-                <article><small>ÉTOILES</small><strong>{totalStars}<i>/36</i></strong></article>
+                <article><small>ÉTOILES</small><strong>{totalStars}<i>/{CAMPAIGN_STAGES.length * 3}</i></strong></article>
               </div>
 
               <div className="backup-actions">
@@ -2043,7 +2043,7 @@ export default function PongV3() {
 
       {importError && <div className="error-toast" role="alert"><strong>IMPORT IMPOSSIBLE</strong><span>{importError}</span><button onClick={() => setImportError("")}>×</button></div>}
 
-      {screen === "menu" && <footer><span>CR3@TIX</span><small>DE L’IMAGINATION À LA CONCEPTION</small><b>V3.0.2</b></footer>}
+      {screen === "menu" && <footer><span>CR3@TIX</span><small>DE L’IMAGINATION À LA CONCEPTION</small><b>V3.1.0</b></footer>}
     </main>
   );
 }

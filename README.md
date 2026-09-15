@@ -1,4 +1,4 @@
-# CR3@TIX PONG V3.0.2
+# CR3@TIX PONG V3.1.0
 
 **De l’imagination à la conception**
 
@@ -12,7 +12,7 @@ CR3@TIX PONG est un jeu d’arcade de combat élémentaire Glace contre Feu, pen
 
 ## Contenu V3
 
-- 12 arènes réparties entre le Royaume Boréal, la Faille Thermique et l’Empire du Brasier ;
+- 50 arènes réparties en 10 chapitres, avec 150 étoiles à gagner ;
 - modificateurs Standard, Velocity, Pressure, Fortress, Chaos et Boss ;
 - boss KRYON (2 phases), VORTEX (2 phases) et SOLARIS (3 phases) ;
 - modes Arène Solo, Duel local, Campagne, Survival, Chaos, Boss Rush, Hardcore et tutoriel ;

@@ -34,11 +34,11 @@ import {
 } from "../app/v3-data";
 
 test("le contenu V3 annoncé est complet", () => {
-  assert.equal(CAMPAIGN_STAGES.length, 12);
+  assert.equal(CAMPAIGN_STAGES.length, 50);
   assert.equal(POWER_UPS.length, 13);
   assert.equal(ACHIEVEMENTS.length, 40);
   assert.ok(CAMPAIGN_STAGES.every((stage) => stage.objectives.length === 3));
-  assert.deepEqual(CAMPAIGN_STAGES.filter((stage) => stage.boss).map((stage) => stage.boss), ["KRYON", "VORTEX", "SOLARIS"]);
+  assert.deepEqual([...new Set(CAMPAIGN_STAGES.filter((stage) => stage.boss).map((stage) => stage.boss))], ["KRYON", "VORTEX", "SOLARIS"]);
 });
 
 test("le défi quotidien est déterministe pour toute la journée", () => {
@@ -204,4 +204,14 @@ test("les succès utilisent les statistiques et les étoiles locales", () => {
   const profile = normalizeProfile({ ...DEFAULT_PROFILE, stars: { "1": 3, "2": 3 }, stats: { ...DEFAULT_PROFILE.stats, wins: 5 } });
   assert.equal(achievementValue(ACHIEVEMENTS.find((entry) => entry.id === "wins-5")!, profile), 5);
   assert.equal(achievementValue(ACHIEVEMENTS.find((entry) => entry.id === "stars-6")!, profile), 6);
+});
+
+ test("campagne étendue : identifiants continus et reprise après le niveau 12", () => {
+  assert.deepEqual(CAMPAIGN_STAGES.map((stage) => stage.id), Array.from({ length: 50 }, (_, i) => i + 1));
+  assert.equal(new Set(CAMPAIGN_STAGES.flatMap((stage) => stage.objectives.map((o) => o.id))).size, 150);
+  const profile = normalizeProfile({ ...DEFAULT_PROFILE, unlockedStage: 12, completedObjectives: { "12": ["s12-win"] } });
+  assert.equal(profile.unlockedStage, 13);
+  assert.deepEqual(profile.completedObjectives["12"], ["s12-win"]);
+  const finished = normalizeProfile({ ...profile, completedObjectives: { "50": ["s50-win"] } });
+  assert.equal(finished.unlockedStage, 50);
 });

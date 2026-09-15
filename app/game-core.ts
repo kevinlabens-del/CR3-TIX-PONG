@@ -1,5 +1,6 @@
 import {
   ACHIEVEMENTS,
+  CAMPAIGN_STAGES,
   DAILY_TEMPLATES,
   type Achievement,
   type CampaignStage,
@@ -256,7 +257,7 @@ export function achievementValue(achievement: Achievement, profile: V3Profile, p
   if (achievement.id === "power-10") return totalPowerUps(profile.stats);
   switch (achievement.stat) {
     case "campaignStars": return Object.values(profile.stars).reduce((sum, value) => sum + value, 0);
-    case "campaignComplete": return (profile.completedObjectives["12"] ?? []).includes("s12-win") ? 1 : 0;
+    case "campaignComplete": return CAMPAIGN_STAGES.every((stage) => (profile.completedObjectives[String(stage.id)] ?? []).includes(stage.objectives[0].id)) ? 1 : 0;
     case "bossCount": return profile.stats.bossesDefeated.length;
     case "level": return profile.level;
     case "winStreak": return profile.winStreak;

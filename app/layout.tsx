@@ -7,7 +7,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 export const metadata: Metadata = {
   metadataBase: new URL("https://kevinlabens-del.github.io/"),
   title: "CR3@TIX PONG V3",
-  description: "CR3@TIX PONG V3 : combat arcade élémentaire, 12 arènes, boss multi-phases, 13 power-ups et modes Survival, Chaos, Boss Rush et Hardcore.",
+  description: "CR3@TIX PONG V3 : combat arcade élémentaire, 50 arènes, boss multi-phases, 13 power-ups et modes Survival, Chaos, Boss Rush et Hardcore.",
   applicationName: "CR3@TIX PONG V3",
   manifest: `${basePath}/manifest.webmanifest`,
   appleWebApp: {

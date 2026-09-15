@@ -73,7 +73,7 @@ function chapterForGame(game: GameState) {
   if (game.arenaTheme === "rift") return 2;
   if (game.arenaTheme === "solar") return 3;
   if (game.arenaTheme === "random") return (game.rng.value % 3) + 1;
-  if (game.campaignStage) return game.campaignStage.chapter;
+  if (game.campaignStage) return ((game.campaignStage.chapter - 1) % 3) + 1;
   if (game.mode === "bossRush" && game.boss?.name === "KRYON") return 1;
   if (game.mode === "bossRush" && game.boss?.name === "VORTEX") return 2;
   if (game.mode === "bossRush" && game.boss?.name === "SOLARIS") return 3;

@@ -1,3 +1,10 @@
+# V3.1.0 — Campagne de 50 niveaux
+
+- Ajout des arènes 13 à 50 et de sept chapitres.
+- Compteurs de progression et fin de campagne adaptés aux 50 niveaux.
+- Conservation des sauvegardes et déblocage du niveau suivant après les anciennes victoires.
+- Mise à jour du cache hors ligne.
+
 # Changelog
 
 Toutes les évolutions notables de CR3@TIX PONG sont consignées ici.
