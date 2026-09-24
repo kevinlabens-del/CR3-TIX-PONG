@@ -350,6 +350,37 @@ export default function PongV3() {
     setInstallPrompt(null);
   }, [installPrompt]);
 
+  /* CR3ATIX_SHARE_V1 — action volontaire depuis Réglages, jamais depuis l'arène. */
+  const shareApp = useCallback(async () => {
+    const url = "https://kevinlabens-del.github.io/CR3-TIX-PONG/";
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "CR3@TIX PONG",
+          text: "Découvre CR3@TIX PONG : arènes, campagne, boss et duels Glace contre Feu.",
+          url,
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    try {
+      if (window.isSecureContext && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        announce("neutral", "LIEN COPIÉ", "CR3@TIX PONG est prêt à être partagé.");
+        return;
+      }
+    } catch {}
+    const field = document.createElement("textarea");
+    field.value = url; field.readOnly = true; field.style.cssText = "position:fixed;opacity:0;pointer-events:none";
+    document.body.appendChild(field); field.select(); field.setSelectionRange(0, field.value.length);
+    let copied = false; try { copied = document.execCommand("copy"); } catch {}
+    field.remove();
+    if (copied) announce("neutral", "LIEN COPIÉ", "CR3@TIX PONG est prêt à être partagé.");
+    else window.prompt("Copie ce lien pour partager CR3@TIX PONG :", url);
+  }, [announce]);
+
   const beginMatch = useCallback((nextMode: GameMode, stage: CampaignStage | null = null, bossRushIndex = 0) => {
     const currentProfile = profileRef.current;
     const palette = ELEMENT_SKINS.find((skin) => skin.id === currentProfile.activeSkin) ?? ELEMENT_SKINS[0];
@@ -1897,6 +1928,7 @@ export default function PongV3() {
                   <div className="settings-actions">
                     <button onClick={() => beginMatch("tutorial")}>▶ REJOUER LE TUTORIEL</button>
                     <button onClick={enterFullscreen}>⛶ BASCULER PLEIN ÉCRAN</button>
+                    <button onClick={() => void shareApp()} aria-label="Partager CR3@TIX PONG" title="Partager le jeu">↗ PARTAGER LE JEU</button>
                     {installPrompt && !isStandalone && <button onClick={installApp}>↓ INSTALLER LE JEU</button>}
                     <button className="danger" onClick={() => setShowResetConfirm(true)}>RÉINITIALISER LA PROGRESSION</button>
                   </div>
