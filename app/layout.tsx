@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    url: basePath ? `${basePath}/` : "/",
+    url: "https://kevinlabens-del.github.io/CR3-TIX-PONG/",
     title: "CR3@TIX PONG V3",
     description: "Le combat arcade Glace contre Feu évolue : techniques, boss multi-phases, progression et modes V3.",
     images: [{ url: `${basePath}/og.jpg`, width: 1200, height: 630, alt: "CR3@TIX PONG V3 — combat arcade Glace contre Feu" }],
